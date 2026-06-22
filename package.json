@@ -1,0 +1,32 @@
+{
+  "name": "fillforge",
+  "version": "1.0.0",
+  "description": "Parse resumes and auto-fill job application forms on ATS platforms",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev:chrome": "wxt dev --browser chrome",
+    "dev:firefox": "wxt dev --browser firefox",
+    "build:chrome": "wxt build --browser chrome",
+    "build:firefox": "wxt build --browser firefox",
+    "zip:chrome": "wxt zip --browser chrome",
+    "zip:firefox": "wxt zip --browser firefox"
+  },
+  "dependencies": {
+    "mammoth": "^1.8.0",
+    "pdfjs-dist": "^4.9.155",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "@types/chrome": "^0.0.304",
+    "@types/react": "^18.3.18",
+    "@types/react-dom": "^18.3.5",
+    "@wxt-dev/module-react": "^1.1.2",
+    "autoprefixer": "^10.4.20",
+    "postcss": "^8.4.49",
+    "tailwindcss": "^3.4.17",
+    "typescript": "^5.7.3",
+    "wxt": "^0.20.26"
+  }
+}
