@@ -10,6 +10,35 @@ const PROVIDER_INFO: Record<ProviderType, { label: string; placeholder: string; 
   'openrouter': { label: 'OpenRouter', placeholder: 'sk-or-...', url: 'https://openrouter.ai/keys' },
 };
 
+const PROVIDER_MODELS: Record<ProviderType, { label: string; value: string }[]> = {
+  'gemini': [
+    { label: 'Gemini 2.5 Flash', value: 'gemini-2.5-flash' },
+    { label: 'Gemini 2.0 Flash', value: 'gemini-2.0-flash' },
+    { label: 'Gemini 1.5 Flash', value: 'gemini-1.5-flash' },
+    { label: 'Gemini 1.5 Pro', value: 'gemini-1.5-pro' }
+  ],
+  'groq': [
+    { label: 'Llama 3.3 70B', value: 'llama-3.3-70b-versatile' },
+    { label: 'Mixtral 8x7B', value: 'mixtral-8x7b-32768' },
+    { label: 'Gemma 2 9B', value: 'gemma2-9b-it' }
+  ],
+  'ollama-local': [
+    { label: 'Llama 3.2', value: 'llama3.2' },
+    { label: 'Mistral', value: 'mistral' },
+    { label: 'Gemma 2', value: 'gemma2' }
+  ],
+  'ollama-cloud': [
+    { label: 'Llama 3.2', value: 'llama3.2' }
+  ],
+  'openrouter': [
+    { label: 'Gemini 2.5 Flash', value: 'google/gemini-2.5-flash' },
+    { label: 'Claude 3.5 Sonnet', value: 'anthropic/claude-3.5-sonnet' },
+    { label: 'GPT-4o Mini', value: 'openai/gpt-4o-mini' },
+    { label: 'Llama 3.3 70B (Free)', value: 'meta-llama/llama-3.3-70b-instruct:free' },
+    { label: 'DeepSeek R1', value: 'deepseek/deepseek-r1' }
+  ]
+};
+
 export default function SettingsTab() {
   const [settings, setSettings] = useState<FillForgeSettings>(createDefaultSettings());
   const [keyInputs, setKeyInputs] = useState<Record<ProviderType, string>>({
@@ -33,6 +62,18 @@ export default function SettingsTab() {
 
   const handleProviderSelect = useCallback((provider: ProviderType) => {
     const updated = { ...settings, selectedProvider: provider };
+    setSettings(updated);
+    chrome.runtime.sendMessage({ type: 'UPDATE_SETTINGS', payload: { settings: updated } });
+  }, [settings]);
+
+  const handleModelChange = useCallback((provider: ProviderType, model: string) => {
+    const updated = {
+      ...settings,
+      providers: {
+        ...settings.providers,
+        [provider]: { ...settings.providers[provider], model }
+      }
+    };
     setSettings(updated);
     chrome.runtime.sendMessage({ type: 'UPDATE_SETTINGS', payload: { settings: updated } });
   }, [settings]);
@@ -102,24 +143,40 @@ export default function SettingsTab() {
                 Get key ↗
               </a>
             </div>
-            {provider !== 'ollama-local' && (
-              <div className="flex gap-1.5">
-                <input
-                  type="password"
-                  value={keyInputs[provider]}
-                  onChange={(e) => handleKeyChange(provider, e.target.value)}
-                  onFocus={(e) => { if (e.target.value === '••••••••') setKeyInputs(prev => ({ ...prev, [provider]: '' })); }}
-                  placeholder={PROVIDER_INFO[provider].placeholder}
-                  className="flex-1 text-[11px]"
-                />
-                <button
-                  onClick={() => handleKeySave(provider)}
-                  className="px-2 py-1 bg-ff-bg-elevated text-ff-text-secondary text-[10px] rounded hover:bg-ff-border transition-colors"
-                >
-                  Save
-                </button>
-              </div>
-            )}
+            <div className="flex flex-col gap-2">
+              {provider !== 'ollama-local' && (
+                <div className="flex gap-1.5">
+                  <input
+                    type="password"
+                    value={keyInputs[provider]}
+                    onChange={(e) => handleKeyChange(provider, e.target.value)}
+                    onFocus={(e) => { if (e.target.value === '••••••••') setKeyInputs(prev => ({ ...prev, [provider]: '' })); }}
+                    placeholder={PROVIDER_INFO[provider].placeholder}
+                    className="flex-1 text-[11px] px-2 py-1.5 bg-ff-bg-elevated border border-ff-border rounded"
+                  />
+                  <button
+                    onClick={() => handleKeySave(provider)}
+                    className="px-2 py-1 bg-ff-bg-elevated text-ff-text-secondary text-[10px] border border-ff-border rounded hover:bg-ff-border hover:text-ff-text-primary transition-colors"
+                  >
+                    Save
+                  </button>
+                </div>
+              )}
+              {PROVIDER_MODELS[provider] && PROVIDER_MODELS[provider].length > 0 && (
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] text-ff-text-muted">Model:</span>
+                  <select
+                    value={settings.providers[provider]?.model || PROVIDER_MODELS[provider][0].value}
+                    onChange={(e) => handleModelChange(provider, e.target.value)}
+                    className="flex-1 text-[11px] px-2 py-1 bg-ff-bg-elevated border border-ff-border rounded text-ff-text-primary"
+                  >
+                    {PROVIDER_MODELS[provider].map(m => (
+                      <option key={m.value} value={m.value}>{m.label}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
+            </div>
           </div>
         ))}
       </div>

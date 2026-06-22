@@ -31,18 +31,56 @@ export default function ProfileTab() {
     setIsLoading(true);
     setError('');
 
-    // Convert to base64 data URL for message passing
-    const reader = new FileReader();
-    reader.onload = () => {
+    try {
+      const { categorizeFile } = await import('../lib/resume-parser');
+      const category = categorizeFile(file.name, file.type);
+      
+      let resumeText = '';
+      let pdfBase64: string | undefined;
+      let imageBase64: string | undefined;
+      let imageMimeType: string | undefined;
+
+      if (category === 'pdf') {
+        const { extractTextFromPDF, extractBase64FromPDF } = await import('../lib/pdf-extractor');
+        resumeText = await extractTextFromPDF(file);
+        // Getting settings requires sending message or we can just always extract it.
+        // It's fast to extract base64, so just extract it if it's a PDF.
+        pdfBase64 = await extractBase64FromPDF(file);
+      } else if (category === 'docx') {
+        const { extractTextFromDOCX } = await import('../lib/docx-extractor');
+        resumeText = await extractTextFromDOCX(file);
+      } else if (category === 'image') {
+        const fileToBase64 = async (f: File) => {
+          return new Promise<string>((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve((reader.result as string).split(',')[1]);
+            reader.onerror = reject;
+            reader.readAsDataURL(f);
+          });
+        };
+        imageBase64 = await fileToBase64(file);
+        imageMimeType = file.type || 'image/png';
+        resumeText = '[Image resume — see attached image]';
+      }
+
       chrome.runtime.sendMessage({
         type: 'PARSE_RESUME',
         payload: {
-          fileData: reader.result,
+          fileData: {
+            category,
+            resumeText,
+            pdfBase64,
+            imageBase64,
+            imageMimeType,
+          },
           fileName: file.name,
-          fileType: file.type,
         },
       }, (res) => {
         setIsLoading(false);
+        if (chrome.runtime.lastError) {
+          setError(chrome.runtime.lastError.message || 'Extension context invalidated. Please reload.');
+          return;
+        }
         if (res?.error) {
           setError(res.error);
         }
@@ -52,8 +90,10 @@ export default function ProfileTab() {
           setFilename(file.name);
         }
       });
-    };
-    reader.readAsDataURL(file);
+    } catch (err: any) {
+      setIsLoading(false);
+      setError(err.message || 'Failed to process file locally.');
+    }
   }, []);
 
   // Edit field
@@ -234,7 +274,7 @@ export default function ProfileTab() {
       )}
 
       {/* Empty state */}
-      {!hasProfile && !isLoading && (
+      {!hasProfile && !isLoading && !error && (
         <div className="text-center py-6 text-ff-text-muted text-xs">
           Upload a resume to get started
         </div>

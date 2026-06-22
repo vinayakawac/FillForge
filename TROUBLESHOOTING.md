@@ -1,4 +1,4 @@
-# FillForge Troubleshooting Guide 🛠️
+# FillForge Troubleshooting Guide
 
 If you are experiencing issues with FillForge, check the following common problems and their solutions.
 

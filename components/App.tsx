@@ -19,7 +19,7 @@ export default function App() {
   return (
     <div className="flex flex-col h-full min-h-[500px]">
       {/* Tab Bar */}
-      <div className="flex border-b border-ff-border bg-ff-bg-secondary shrink-0">
+      <div className="flex border-b border-ff-border bg-ff-bg-secondary shrink-0 relative pr-10">
         {TABS.map((tab) => (
           <button
             key={tab.id}
@@ -34,6 +34,17 @@ export default function App() {
             {tab.label}
           </button>
         ))}
+        {/* Close Button */}
+        <button 
+          onClick={() => window.parent.postMessage({ type: 'CLOSE_UI' }, '*')}
+          className="absolute right-0 top-0 bottom-0 w-10 flex items-center justify-center text-ff-text-secondary hover:text-red-500 transition-colors"
+          title="Close"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
       </div>
 
       {/* Tab Content */}

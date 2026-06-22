@@ -5,8 +5,6 @@
 
 import type { ProfileData, ProviderType, FillForgeSettings, FieldLocks } from './types';
 import { createEmptyProfile } from './types';
-import { extractTextFromPDF, extractBase64FromPDF } from './pdf-extractor';
-import { extractTextFromDOCX } from './docx-extractor';
 import { callWithFallback, type LLMRequest } from './providers';
 import { inferStateCode, inferCountryCode } from './geo-maps';
 
@@ -162,23 +160,23 @@ RESUME TEXT:
 
 // ---- File Type Detection ----
 
-type FileCategory = 'pdf' | 'docx' | 'image';
+export type FileCategory = 'pdf' | 'docx' | 'image';
 
 const IMAGE_TYPES = ['image/png', 'image/jpeg', 'image/jpg', 'image/webp'];
 const IMAGE_EXTENSIONS = ['.png', '.jpg', '.jpeg', '.webp'];
 
-function categorizeFile(file: File): FileCategory {
-  const ext = file.name.toLowerCase().split('.').pop() || '';
+export function categorizeFile(filename: string, mimeType: string): FileCategory {
+  const ext = filename.toLowerCase().split('.').pop() || '';
 
-  if (file.type === 'application/pdf' || ext === 'pdf') return 'pdf';
+  if (mimeType === 'application/pdf' || ext === 'pdf') return 'pdf';
   if (
-    file.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' ||
-    file.type === 'application/msword' ||
+    mimeType === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' ||
+    mimeType === 'application/msword' ||
     ext === 'docx' || ext === 'doc'
   ) return 'docx';
-  if (IMAGE_TYPES.includes(file.type) || IMAGE_EXTENSIONS.includes('.' + ext)) return 'image';
+  if (IMAGE_TYPES.includes(mimeType) || IMAGE_EXTENSIONS.includes('.' + ext)) return 'image';
 
-  throw new Error(`Unsupported file type: ${file.name}`);
+  throw new Error(`Unsupported file type: ${filename}`);
 }
 
 // ---- Pre-processing ----
@@ -336,20 +334,14 @@ function setNestedValue(obj: Record<string, unknown>, path: string, value: unkno
   current[keys[keys.length - 1]] = value;
 }
 
-// ---- Image Base64 Conversion ----
+// ---- Extracted File Input Type ----
 
-async function fileToBase64(file: File): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => {
-      const result = reader.result as string;
-      // Remove data URL prefix: "data:image/png;base64,"
-      const base64 = result.split(',')[1];
-      resolve(base64);
-    };
-    reader.onerror = reject;
-    reader.readAsDataURL(file);
-  });
+export interface ExtractedFileData {
+  category: FileCategory;
+  resumeText: string;
+  pdfBase64?: string;
+  imageBase64?: string;
+  imageMimeType?: string;
 }
 
 // ---- Main Parse Function ----
@@ -363,36 +355,18 @@ export interface ParseResult {
 }
 
 export async function parseResume(
-  file: File,
+  fileData: ExtractedFileData,
   settings: FillForgeSettings,
   existingProfile: ProfileData | null,
   locks: FieldLocks
 ): Promise<ParseResult> {
   const warnings: string[] = [];
-  const category = categorizeFile(file);
 
-  let resumeText = '';
-  let pdfBase64: string | undefined;
-  let imageBase64: string | undefined;
-  let imageMimeType: string | undefined;
+  let { resumeText, pdfBase64, imageBase64, imageMimeType, category } = fileData;
 
-  // Step 1: File Ingestion
-  if (category === 'pdf') {
-    resumeText = await extractTextFromPDF(file);
-    // Also get base64 for Gemini native PDF support
-    if (settings.selectedProvider === 'gemini') {
-      pdfBase64 = await extractBase64FromPDF(file);
-    }
-  } else if (category === 'docx') {
-    resumeText = await extractTextFromDOCX(file);
-  } else if (category === 'image') {
-    // Images require a vision-capable provider
-    if (settings.selectedProvider !== 'gemini') {
-      warnings.push('Image resumes require Gemini provider for vision support. Switch to Gemini for best results.');
-    }
-    imageBase64 = await fileToBase64(file);
-    imageMimeType = file.type || 'image/png';
-    resumeText = '[Image resume — see attached image]';
+  // Step 1: LLM Extraction Prep
+  if (category === 'image' && settings.selectedProvider !== 'gemini') {
+    warnings.push('Image resumes require Gemini provider for vision support. Switch to Gemini for best results.');
   }
 
   // Step 2: Pre-processing

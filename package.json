@@ -7,8 +7,9 @@
   "scripts": {
     "dev:chrome": "wxt dev --browser chrome",
     "dev:firefox": "wxt dev --browser firefox",
-    "build:chrome": "wxt build --browser chrome",
-    "build:firefox": "wxt build --browser firefox",
+    "build:chrome": "wxt build --browser chrome && node -e \"require('fs').rmSync('fillforge_chrome', {recursive:true, force:true}); require('fs').cpSync('.output/chrome-mv3', 'fillforge_chrome', {recursive:true})\"",
+    "build:zen": "wxt build --browser firefox && node -e \"require('fs').rmSync('fillforge_zen', {recursive:true, force:true}); require('fs').cpSync('.output/firefox-mv2', 'fillforge_zen', {recursive:true})\"",
+    "build:all": "npm run build:chrome && npm run build:zen",
     "zip:chrome": "wxt zip --browser chrome",
     "zip:firefox": "wxt zip --browser firefox"
   },

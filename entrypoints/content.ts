@@ -15,8 +15,24 @@ export default defineContentScript({
   main(_ctx) {
     let orchestrator: FillOrchestrator | null = null;
 
-    // Listen for fill commands from background/popup
+    // Listen for commands from background/popup
     chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
+      if (message.type === 'TOGGLE_UI') {
+        import('../content/ui-overlay').then(({ toggleUI }) => {
+          toggleUI();
+        });
+        sendResponse({ success: true });
+        return false;
+      }
+      
+      if (message.type === 'CLOSE_UI') {
+        import('../content/ui-overlay').then(({ closeUI }) => {
+          closeUI();
+        });
+        sendResponse({ success: true });
+        return false;
+      }
+
       if (message.type === 'EXECUTE_FILL') {
         const { profile, settings } = message.payload as {
           profile: ProfileData;

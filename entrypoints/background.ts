@@ -2,7 +2,7 @@
 // FillForge — Background Service Worker
 // ============================================================
 
-import { parseResume, type ParseResult } from '../lib/resume-parser';
+import { parseResume, type ParseResult, type ExtractedFileData } from '../lib/resume-parser';
 import {
   getProfile, setProfile, getSettings, setSettings,
   getFieldLocks, setFieldLock, getHistory, addHistoryEntry,
@@ -14,6 +14,25 @@ import type { FillOperation, FillResult, ProviderType } from '../lib/types';
 
 export default defineBackground(() => {
   console.log('[FillForge] Background service worker started');
+
+  chrome.action.onClicked.addListener(async (tab) => {
+    if (tab.id) {
+      // Ensure content script is injected
+      try {
+        await chrome.scripting.executeScript({
+          target: { tabId: tab.id },
+          files: ['content-scripts/content.js'],
+        });
+      } catch (e) {
+        console.error('Failed to inject script:', e);
+      }
+      
+      chrome.tabs.sendMessage(tab.id, { type: 'TOGGLE_UI' }).catch(() => {
+        // Ignore errors if content script is still initializing or on restricted pages
+        console.log('Could not send TOGGLE_UI message to tab');
+      });
+    }
+  });
 
   chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
     handleMessage(message).then(sendResponse).catch(err => {
@@ -27,22 +46,16 @@ export default defineBackground(() => {
 async function handleMessage(message: { type: string; payload?: unknown }): Promise<unknown> {
   switch (message.type) {
     case 'PARSE_RESUME': {
-      const { fileData, fileName, fileType } = message.payload as {
-        fileData: string; // base64 data URL
+      const { fileData, fileName } = message.payload as {
+        fileData: ExtractedFileData;
         fileName: string;
-        fileType: string;
       };
-
-      // Reconstruct File from base64
-      const response = await fetch(fileData);
-      const blob = await response.blob();
-      const file = new File([blob], fileName, { type: fileType });
 
       const settings = await getSettings();
       const existingProfile = await getProfile();
       const locks = await getFieldLocks();
 
-      const result: ParseResult = await parseResume(file, settings, existingProfile, locks);
+      const result: ParseResult = await parseResume(fileData, settings, existingProfile, locks);
 
       // Store results
       await setProfile(result.profile);

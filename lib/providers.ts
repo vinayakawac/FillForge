@@ -115,7 +115,7 @@ async function callOpenAICompatible(
       { role: 'user', content: request.userPrompt },
     ],
     temperature: 0.1,
-    max_tokens: 8192,
+    max_tokens: 800,
   };
 
   const response = await fetch(endpoint, {
@@ -193,7 +193,7 @@ async function callOpenRouter(config: ProviderConfig, request: LLMRequest): Prom
   return callOpenAICompatible(
     config, request,
     'https://openrouter.ai/api/v1/chat/completions',
-    'meta-llama/llama-3.3-70b-instruct:free',
+    'google/gemini-2.5-flash',
     'openrouter',
     {
       'HTTP-Referer': 'fillforge-extension',
@@ -256,7 +256,10 @@ export async function callWithFallback(
     if (!config) continue;
 
     // Skip providers that need keys but don't have them (except ollama-local)
-    if (providerType !== 'ollama-local' && !config.apiKey) continue;
+    if (providerType !== 'ollama-local' && !config.apiKey) {
+      triedProviders.push({ type: providerType, error: 'API key not configured' });
+      continue;
+    }
 
     const response = await callProvider(config, request);
     triedProviders.push({ type: providerType, error: response.error });
@@ -268,11 +271,13 @@ export async function callWithFallback(
     console.warn(`[FillForge] Provider ${providerType} failed:`, response.error || 'rate limited');
   }
 
+  const errorDetails = triedProviders.map(tp => `${tp.type} (${tp.error})`).join(' | ');
+
   return {
     text: '',
     provider: selectedProvider,
     model: '',
-    error: 'All providers failed. Check your API keys and try again.',
+    error: `All providers failed. Details: ${errorDetails}`,
     triedProviders,
   };
 }
