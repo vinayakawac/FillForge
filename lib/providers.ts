@@ -115,7 +115,7 @@ async function callOpenAICompatible(
       { role: 'user', content: request.userPrompt },
     ],
     temperature: 0.1,
-    max_tokens: 800,
+    max_tokens: 500,
   };
 
   const response = await fetch(endpoint, {

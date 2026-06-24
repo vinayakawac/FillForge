@@ -4,7 +4,7 @@
 // ============================================================
 
 import type { ProfileData, FillResult } from '../lib/types';
-import { FIELD_ALIASES, getProfileValue, validateFieldType } from '../lib/field-aliases';
+import { FIELD_ALIASES, getProfileValue, validateFieldType, validateFieldCrossCheck } from '../lib/field-aliases';
 import { fillInput, fillSelect, getFieldSignals, shouldSkipField } from './fill-utils';
 
 const CONFIDENCE_THRESHOLD = 0.7;
@@ -66,7 +66,7 @@ export function fillGeneric(
     if (bestScore >= CONFIDENCE_THRESHOLD && bestMatch) {
       const value = getProfileValue(profile, bestMatch);
 
-      if (value && validateFieldType(bestMatch, value)) {
+      if (value && validateFieldType(bestMatch, value) && validateFieldCrossCheck(profile, bestMatch, value)) {
         if (el instanceof HTMLSelectElement) {
           const success = fillSelect(el, value);
           results.push({

@@ -220,6 +220,18 @@ function extractJSON(raw: string): string {
 
 // ---- Post-processing ----
 
+/**
+ * Convert a string to Title Case (only first letter of each word capitalized).
+ * Handles ALL CAPS input like "VINAYAKA" -> "Vinayaka".
+ */
+function toTitleCase(str: string): string {
+  if (!str) return str;
+  return str
+    .split(/\s+/)
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .join(' ');
+}
+
 function postProcessProfile(profile: ProfileData): ProfileData {
   const p = structuredClone(profile);
 
@@ -230,6 +242,11 @@ function postProcessProfile(profile: ProfileData): ProfileData {
   if (p.personal.phoneAlt) {
     p.personal.phoneAlt = p.personal.phoneAlt.replace(/[^\d+\-() ]/g, '').trim();
   }
+
+  // Title-case names (VINAYAKA -> Vinayaka)
+  if (p.personal.firstName) p.personal.firstName = toTitleCase(p.personal.firstName);
+  if (p.personal.lastName) p.personal.lastName = toTitleCase(p.personal.lastName);
+  if (p.personal.fullName) p.personal.fullName = toTitleCase(p.personal.fullName);
 
   // Split fullName into firstName/lastName if either is empty
   if (p.personal.fullName && (!p.personal.firstName || !p.personal.lastName)) {

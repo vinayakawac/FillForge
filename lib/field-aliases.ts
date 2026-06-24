@@ -81,6 +81,38 @@ export function getProfileValue(profile: ProfileData, fieldKey: string): string 
 }
 
 /**
+ * Cross-validate that a value makes sense for the field it's being assigned to.
+ * Prevents the user's name from being filled into a "company" field and vice versa.
+ */
+export function validateFieldCrossCheck(profile: ProfileData, fieldKey: string, value: string): boolean {
+  if (!value) return true;
+  const nameParts = [
+    profile.personal.firstName?.toLowerCase(),
+    profile.personal.lastName?.toLowerCase(),
+    profile.personal.fullName?.toLowerCase(),
+  ].filter(Boolean);
+
+  // Don't put a person's name into a company/title/school field
+  if (['company', 'school', 'major', 'degree'].includes(fieldKey)) {
+    for (const name of nameParts) {
+      if (name && (value.toLowerCase() === name || value.toLowerCase().includes(name))) {
+        return false;
+      }
+    }
+  }
+
+  // Don't put a company name into a name field
+  if (['firstName', 'lastName', 'fullName'].includes(fieldKey)) {
+    const companyName = profile.work[0]?.company?.toLowerCase();
+    if (companyName && value.toLowerCase() === companyName) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+/**
  * Validate value type matches expected field type.
  * Prevents phone numbers going into email fields, etc.
  */

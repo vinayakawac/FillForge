@@ -43,11 +43,31 @@ export async function updateProfileField(path: string, value: unknown): Promise<
   await setProfile(profile);
 }
 
-// ---- Settings ----
+// Deprecated models that should be auto-migrated
+const DEPRECATED_MODELS: Record<string, string> = {
+  'gemini-1.5-flash': 'gemini-2.5-flash',
+  'gemini-1.5-pro': 'gemini-2.5-flash',
+  'gemini-pro': 'gemini-2.5-flash',
+};
 
 export async function getSettings(): Promise<FillForgeSettings> {
   const result = await chrome.storage.local.get(KEYS.settings);
-  return result[KEYS.settings] || createDefaultSettings();
+  const settings: FillForgeSettings = result[KEYS.settings] || createDefaultSettings();
+
+  // Auto-migrate deprecated models
+  let migrated = false;
+  for (const provider of Object.keys(settings.providers) as ProviderType[]) {
+    const model = settings.providers[provider].model;
+    if (model && DEPRECATED_MODELS[model]) {
+      settings.providers[provider].model = DEPRECATED_MODELS[model];
+      migrated = true;
+    }
+  }
+  if (migrated) {
+    await chrome.storage.local.set({ [KEYS.settings]: settings });
+  }
+
+  return settings;
 }
 
 export async function setSettings(settings: FillForgeSettings): Promise<void> {

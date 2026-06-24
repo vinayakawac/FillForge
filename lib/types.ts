@@ -307,7 +307,7 @@ export function createDefaultSettings(): FillForgeSettings {
   return {
     selectedProvider: 'gemini',
     providers: {
-      'gemini': { type: 'gemini', apiKey: '', enabled: true },
+      'gemini': { type: 'gemini', apiKey: '', model: 'gemini-2.5-flash', enabled: true },
       'groq': { type: 'groq', apiKey: '', enabled: false },
       'ollama-local': { type: 'ollama-local', apiKey: '', enabled: false },
       'ollama-cloud': { type: 'ollama-cloud', apiKey: '', enabled: false },
